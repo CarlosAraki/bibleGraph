@@ -1,0 +1,8 @@
+services:
+  webapp:
+    build:
+      context: ./webapp
+      dockerfile: Dockerfile
+    ports:
+      - "9995:80"
+    restart: unless-stopped

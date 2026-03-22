@@ -1,0 +1,4 @@
+# Dependências para análise topológica (analise_topologica_biblia.py)
+networkx>=3.0
+pandas>=2.0
+matplotlib>=3.7
