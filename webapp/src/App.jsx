@@ -35,6 +35,9 @@ function GraphController({ selectedNode, onSelectNode, originalAttrsRef }) {
         graph.mergeNodeAttributes(n, { color: orig.color, size: orig.size })
       }
     })
+    graph.forEachEdge((edge) => {
+      graph.removeEdgeAttribute(edge, 'color')
+    })
     sigma.refresh()
   }, [sigma, originalAttrsRef])
 
@@ -46,25 +49,32 @@ function GraphController({ selectedNode, onSelectNode, originalAttrsRef }) {
     const graph = sigma.getGraph()
     if (!graph.hasNode(selectedNode)) return
 
-    const neighbors = new Set()
-    graph.forEachNeighbor(selectedNode, (n) => neighbors.add(n))
-    graph.forEachInNeighbor(selectedNode, (n) => neighbors.add(n))
+    const highlighted = new Set([selectedNode])
+    graph.forEachNeighbor(selectedNode, (n) => highlighted.add(n))
+    graph.forEachInNeighbor(selectedNode, (n) => highlighted.add(n))
 
     gotoNode(selectedNode, { duration: 500 })
 
     const HIGHLIGHT = '#fbbf24'
-    const DIM = '#1e293b'
-    const DIM_SIZE = 0.4
+    const HIGHLIGHT_EDGE = '#94a3b8'
+    const BACKGROUND = '#0f172a'
 
     graph.forEachNode((n, attrs) => {
       const orig = originalAttrsRef.current?.[n]
       const baseSize = orig?.size ?? attrs.size ?? 5
-      if (n === selectedNode || neighbors.has(n)) {
+      if (highlighted.has(n)) {
         graph.mergeNodeAttributes(n, { color: HIGHLIGHT, size: Math.max(baseSize * 2, 12) })
       } else {
-        graph.mergeNodeAttributes(n, { color: DIM, size: Math.max(baseSize * DIM_SIZE, 1) })
+        graph.mergeNodeAttributes(n, { color: BACKGROUND, size: 0.5 })
       }
     })
+
+    graph.forEachEdge((edge) => {
+      const [source, target] = graph.extremities(edge)
+      const bothHighlighted = highlighted.has(source) && highlighted.has(target)
+      graph.mergeEdgeAttributes(edge, { color: bothHighlighted ? HIGHLIGHT_EDGE : BACKGROUND })
+    })
+
     sigma.refresh()
 
     return () => resetHighlight()
@@ -167,8 +177,12 @@ function AppContent() {
               originalAttrsRef={originalAttrsRef}
             />
             <LayoutForceAtlas2Control
-              settings={{ iterations: 50, linLogMode: true }}
-              autoRunFor={3000}
+              settings={
+                view === 'full'
+                  ? { iterations: 80, linLogMode: true, scalingRatio: 25, gravity: 0.01 }
+                  : { iterations: 50, linLogMode: true }
+              }
+              autoRunFor={view === 'full' ? 6000 : 3000}
               className="absolute bottom-4 left-4 !bg-slate-800/90 !border-slate-600"
             />
           </SigmaContainer>
